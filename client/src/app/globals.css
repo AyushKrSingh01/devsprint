@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  --color-ink: #14171a;
+  --color-paper: #fafaf8;
+  --color-slate: #64707d;
+  --color-line: #e2e5e8;
+  --color-forest: #2f6f4e;
+  --color-forest-hover: #285f42;
+  --color-amber: #c2740c;
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-paper: var(--color-paper);
+  --color-slate: var(--color-slate);
+  --color-line: var(--color-line);
+  --color-forest: var(--color-forest);
+  --color-forest-hover: var(--color-forest-hover);
+  --color-amber: var(--color-amber);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+body {
+  font-family: var(--font-sans);
+}
