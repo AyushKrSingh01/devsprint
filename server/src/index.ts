@@ -7,6 +7,7 @@ import type { AuthRequest } from "./middleware/auth.js";
 import { prisma } from "./lib/prisma.js";
 import boardsRoutes from "./routes/boards.js";
 import listsRoutes from "./routes/lists.js";
+import cardsRoutes from "./routes/cards.js";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use("/auth", authRoutes);
 app.use("/boards", boardsRoutes);
 app.use("/lists", listsRoutes);
+app.use("/cards", cardsRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
