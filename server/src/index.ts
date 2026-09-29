@@ -5,7 +5,8 @@ import authRoutes from "./routes/auth.js";
 import { authMiddleware } from "./middleware/auth.js";
 import type { AuthRequest } from "./middleware/auth.js";
 import { prisma } from "./lib/prisma.js";
-
+import boardsRoutes from "./routes/boards.js";
+import listsRoutes from "./routes/lists.js";
 
 const app = express();
 
@@ -13,6 +14,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/auth", authRoutes);
+app.use("/boards", boardsRoutes);
+app.use("/lists", listsRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
