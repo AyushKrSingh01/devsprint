@@ -2,7 +2,9 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.js";
-
+import { authMiddleware } from "./middleware/auth.js";
+import type { AuthRequest } from "./middleware/auth.js";
+import { prisma } from "./lib/prisma.js";
 
 
 const app = express();
@@ -14,6 +16,18 @@ app.use("/auth", authRoutes);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/me", authMiddleware, async (req: AuthRequest, res) => {
+  if (!req.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: req.userId },
+    select: { id: true, email: true, name: true },
+  });
+  res.json({ user });
 });
 
 const PORT = process.env.PORT || 4000;
