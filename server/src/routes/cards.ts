@@ -62,7 +62,8 @@ router.post("/", async (req: AuthRequest, res) => {
       position,
     },
   });
-
+   const io = req.app.get("io");
+    io.to(`board:${list.boardId}`).emit("card:created", { card });
   res.status(201).json({ card });
 });
 
