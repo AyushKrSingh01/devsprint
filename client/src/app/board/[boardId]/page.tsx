@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Navbar } from "@/components/ui/Navbar";
 import { Card } from "@/components/ui/Card";
+import { getSocket } from "@/lib/socket";
 
 interface CardItem {
   id: string;
@@ -38,13 +39,31 @@ export default function BoardPage() {
       .finally(() => setLoading(false));
   }
 
-  useEffect(() => {
+ useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
       router.push("/login");
       return;
     }
     loadLists();
+
+    const socket = getSocket();
+    socket.emit("join-board", boardId);
+
+    socket.on("card:created", ({ card }: { card: CardItem & { listId: string } }) => {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === card.listId
+            ? { ...list, cards: [...list.cards, card] }
+            : list
+        )
+      );
+    });
+
+    return () => {
+      socket.emit("leave-board", boardId);
+      socket.off("card:created");
+    };
   }, [boardId]);
 
   async function handleCreateList(e: React.FormEvent) {
@@ -56,15 +75,8 @@ export default function BoardPage() {
     setNewListTitle("");
   }
 
- async function handleCreateCard(listId: string, title: string, priority: string) {
-  const res = await api.post("/cards", { title, listId, priority });
-    setLists((prev) =>
-      prev.map((list) =>
-        list.id === listId
-          ? { ...list, cards: [...list.cards, res.data.card] }
-          : list
-      )
-    );
+   async function handleCreateCard(listId: string, title: string, priority: string) {
+    await api.post("/cards", { title, listId, priority });
   }
 
   if (loading) {
