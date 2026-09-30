@@ -9,6 +9,12 @@ Built by Ayush Kumar Singh — [GitHub](https://github.com/AyushKrSingh01)
 
 > Note: the backend is on Render's free tier, which spins down after inactivity — the first request after a while may take up to 50 seconds to respond while it wakes up.
 
+## Screenshots
+
+| Landing page | Dashboard | Board view |
+|---|---|---|
+| ![Landing page](docs/screenshots/LandingPage.png) | ![Dashboard](docs/screenshots/Dashboard.png) | ![Board view](docs/screenshots/Lists.png) |
+
 ## What it does
 
 - Sign up / log in with JWT-based authentication
@@ -31,18 +37,14 @@ Built by Ayush Kumar Singh — [GitHub](https://github.com/AyushKrSingh01)
 - **Authorization checks on every resource, not just authentication** — every board/list/card route verifies the requesting user actually owns or is a member of the resource before returning or modifying it. Skipping this would let any logged-in user access or modify data belonging to someone else, just by guessing an ID (a real vulnerability class called broken object-level authorization).
 
 ## Architecture
-┌──────────────┐ REST API ┌──────────────┐
-│ Next.js │ ───────────────────────▶ │ Express │
-│ (Vercel) │ ◀─────────────────────── │ (Render) │
-│ │ │ │
-│ │ WebSocket │ │
-│ │ ◀────────────────────────▶│ │
-└──────────────┘ └───────┬───────┘
-│
-▼
-┌──────────────┐
-│ PostgreSQL │
-│ (via Prisma) │
+
+```mermaid
+graph LR
+    A[Next.js Frontend<br/>Vercel] -- REST API --> B[Express Backend<br/>Render]
+    B -- REST API --> A
+    A <-- WebSocket --> B
+    B --> C[(PostgreSQL<br/>via Prisma)]
+```
 
 ## A technical challenge worth mentioning
 
@@ -76,14 +78,15 @@ npm run dev
 - No dark mode (deliberately deferred to keep the first pass focused)
 
 ## Project structure
+
+```text
 devsprint/
-├── client/ # Next.js frontend
-│ └── src/
-│ ├── app/ # App Router pages
-│ ├── components/ui/ # Shared design-system components
-│ └── lib/ # API client, socket client
-└── server/ # Express backend
-└── src/
-├── routes/ # boards, lists, cards, auth
-├── middleware/ # JWT verification
-└── lib/ # Prisma client
+  client/            Next.js frontend
+    src/app/         App Router pages
+    src/components/  Shared design-system components
+    src/lib/         API client, socket client
+  server/            Express backend
+    src/routes/      boards, lists, cards, auth
+    src/middleware/  JWT verification
+    src/lib/         Prisma client
+```
