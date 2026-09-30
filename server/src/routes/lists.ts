@@ -46,9 +46,12 @@ router.post("/", async (req: AuthRequest, res) => {
 
   const position = lastList ? lastList.position + 1 : 0;
 
-  const list = await prisma.list.create({
+   const list = await prisma.list.create({
     data: { title, boardId, position },
   });
+
+  const io = req.app.get("io");
+  io.to(`board:${boardId}`).emit("list:created", { list });
 
   res.status(201).json({ list });
 });

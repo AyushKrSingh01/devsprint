@@ -110,10 +110,13 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     Object.entries(parsedBody.data).filter(([, value]) => value !== undefined)
   );
 
-  const card = await prisma.card.update({
+   const card = await prisma.card.update({
     where: { id },
     data: updateData,
   });
+
+  const io = req.app.get("io");
+  io.to(`board:${list.boardId}`).emit("card:updated", { card });
 
   res.json({ card });
 });
@@ -140,7 +143,10 @@ router.delete("/:id", async (req: AuthRequest, res) => {
     return res.status(404).json({ error: "Card not found" });
   }
 
-  await prisma.card.delete({ where: { id } });
+   await prisma.card.delete({ where: { id } });
+
+  const io = req.app.get("io");
+  io.to(`board:${list.boardId}`).emit("card:deleted", { cardId: id, listId: existingCard.listId });
 
   res.status(204).send();
 });

@@ -60,23 +60,59 @@ export default function BoardPage() {
       );
     });
 
+    socket.on("list:created", ({ list }: { list: ListItem }) => {
+      setLists((prev) => [...prev, { ...list, cards: [] }]);
+    });
+
+    socket.on("card:updated", ({ card }: { card: CardItem & { listId: string } }) => {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === card.listId
+            ? {
+                ...list,
+                cards: list.cards.map((c) => (c.id === card.id ? card : c)),
+              }
+            : list
+        )
+      );
+    });
+
+    socket.on("card:deleted", ({ cardId, listId }: { cardId: string; listId: string }) => {
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === listId
+            ? { ...list, cards: list.cards.filter((c) => c.id !== cardId) }
+            : list
+        )
+      );
+    });
+
     return () => {
       socket.emit("leave-board", boardId);
       socket.off("card:created");
+      socket.off("list:created");
+      socket.off("card:updated");
+      socket.off("card:deleted");
     };
   }, [boardId]);
 
-  async function handleCreateList(e: React.FormEvent) {
+    async function handleCreateList(e: React.FormEvent) {
     e.preventDefault();
     if (!newListTitle.trim()) return;
 
-    const res = await api.post("/lists", { title: newListTitle, boardId });
-    setLists((prev) => [...prev, { ...res.data.list, cards: [] }]);
+    await api.post("/lists", { title: newListTitle, boardId });
     setNewListTitle("");
   }
 
    async function handleCreateCard(listId: string, title: string, priority: string) {
     await api.post("/cards", { title, listId, priority });
+  }
+    async function handleUpdatePriority(cardId: string, priority: string) {
+    await api.patch(`/cards/${cardId}`, { priority });
+  }
+
+  async function handleDeleteCard(cardId: string) {
+    await api.delete(`/cards/${cardId}`);
   }
 
   if (loading) {
@@ -98,16 +134,28 @@ export default function BoardPage() {
               <div className="flex flex-col gap-2 mb-3">
                 {list.cards.map((card) => (
                   <Card key={card.id} className="p-3">
-                    <p className="text-sm">{card.title}</p>
-                    <span
-                      className={`inline-block text-xs font-mono px-1.5 py-0.5 rounded mt-2 ${
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm">{card.title}</p>
+                      <button
+                        onClick={() => handleDeleteCard(card.id)}
+                        className="text-slate hover:text-amber text-xs"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <select
+                      value={card.priority}
+                      onChange={(e) => handleUpdatePriority(card.id, e.target.value)}
+                      className={`inline-block text-xs font-mono px-1.5 py-0.5 rounded mt-2 border-0 cursor-pointer ${
                         card.priority === "high"
                           ? "bg-amber/10 text-amber"
                           : "bg-slate/10 text-slate"
                       }`}
                     >
-                      {card.priority}
-                    </span>
+                      <option value="low">low</option>
+                      <option value="medium">medium</option>
+                      <option value="high">high</option>
+                    </select>
                   </Card>
                 ))}
               </div>
