@@ -5,7 +5,7 @@ A real-time sprint planning tool for dev teams — create boards, organize work 
 **Live app:** https://devsprint-gray.vercel.app
 **API:** https://devsprint-api.onrender.com
 
-Built by Ayush Kumar Singh — [GitHub](https://github.com/AyushKrSingh01)
+
 
 > Note: the backend is on Render's free tier, which spins down after inactivity — the first request after a while may take up to 50 seconds to respond while it wakes up.
 
