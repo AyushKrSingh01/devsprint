@@ -1,6 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCorners,
+   useDroppable,
+} from "@dnd-kit/core";
+
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Navbar } from "@/components/ui/Navbar";
@@ -107,6 +123,67 @@ export default function BoardPage() {
    async function handleCreateCard(listId: string, title: string, priority: string) {
     await api.post("/cards", { title, listId, priority });
   }
+    const sensors = useSensors(useSensor(PointerSensor));
+
+    function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const activeCardId = active.id as string;
+    const overId = over.id as string;
+
+    let sourceListId = "";
+    let targetListId = "";
+    let targetPosition = 0;
+
+    for (const list of lists) {
+      const activeIndex = list.cards.findIndex((c) => c.id === activeCardId);
+      if (activeIndex !== -1) sourceListId = list.id;
+
+      const overIndex = list.cards.findIndex((c) => c.id === overId);
+      if (overIndex !== -1) {
+        targetListId = list.id;
+        targetPosition = overIndex;
+      }
+    }
+
+    if (!targetListId) {
+      const droppedOnList = lists.find((l) => l.id === overId);
+      if (droppedOnList) {
+        targetListId = droppedOnList.id;
+        targetPosition = 0;
+      }
+    }
+
+    if (!sourceListId || !targetListId) return;
+    setLists((prev) => {
+      const sourceList = prev.find((l) => l.id === sourceListId)!;
+      const movedCard = sourceList.cards.find((c) => c.id === activeCardId)!;
+
+      return prev.map((list) => {
+        if (list.id === sourceListId && list.id === targetListId) {
+          const withoutMoved = list.cards.filter((c) => c.id !== activeCardId);
+          const insertAt = withoutMoved.findIndex((c) => c.id === overId);
+          withoutMoved.splice(insertAt, 0, movedCard);
+          return { ...list, cards: withoutMoved };
+        }
+        if (list.id === sourceListId) {
+          return { ...list, cards: list.cards.filter((c) => c.id !== activeCardId) };
+        }
+        if (list.id === targetListId) {
+          const newCards = [...list.cards];
+          newCards.splice(targetPosition, 0, movedCard);
+          return { ...list, cards: newCards };
+        }
+        return list;
+      });
+    });
+
+    api.patch(`/cards/${activeCardId}`, {
+      listId: targetListId,
+      position: targetPosition,
+    });
+  }
     async function handleUpdatePriority(cardId: string, priority: string) {
     await api.patch(`/cards/${cardId}`, { priority });
   }
@@ -123,56 +200,42 @@ export default function BoardPage() {
     );
   }
 
-  return (
+    return (
     <div className="flex-1 flex flex-col">
       <Navbar />
-      <div className="flex-1 overflow-x-auto px-6 py-8">
-        <div className="flex gap-4 items-start">
-          {lists.map((list) => (
-            <div key={list.id} className="w-72 shrink-0">
-              <p className="font-medium text-sm mb-3 px-1">{list.title}</p>
-              <div className="flex flex-col gap-2 mb-3">
-                {list.cards.map((card) => (
-                  <Card key={card.id} className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm">{card.title}</p>
-                      <button
-                        onClick={() => handleDeleteCard(card.id)}
-                        className="text-slate hover:text-amber text-xs"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <select
-                      value={card.priority}
-                      onChange={(e) => handleUpdatePriority(card.id, e.target.value)}
-                      className={`inline-block text-xs font-mono px-1.5 py-0.5 rounded mt-2 border-0 cursor-pointer ${
-                        card.priority === "high"
-                          ? "bg-amber/10 text-amber"
-                          : "bg-slate/10 text-slate"
-                      }`}
-                    >
-                      <option value="low">low</option>
-                      <option value="medium">medium</option>
-                      <option value="high">high</option>
-                    </select>
-                  </Card>
-                ))}
-              </div>
-              <NewCardForm onCreate={(title, priority) => handleCreateCard(list.id, title, priority)} />
-            </div>
-          ))}
+      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+        <div className="flex-1 overflow-x-auto px-6 py-8">
+          <div className="flex gap-4 items-start">
+            {lists.map((list) => (
+              <DroppableList key={list.id} listId={list.id} title={list.title}>
+                <SortableContext
+                  items={list.cards.map((c) => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {list.cards.map((card) => (
+                    <SortableCard
+                      key={card.id}
+                      card={card}
+                      onDelete={handleDeleteCard}
+                      onPriorityChange={handleUpdatePriority}
+                    />
+                  ))}
+                </SortableContext>
+                <NewCardForm onCreate={(title, priority) => handleCreateCard(list.id, title, priority)} />
+              </DroppableList>
+            ))}
 
-          <form onSubmit={handleCreateList} className="w-72 shrink-0">
-            <input
-              value={newListTitle}
-              onChange={(e) => setNewListTitle(e.target.value)}
-              placeholder="+ Add list"
-              className="w-full border border-line rounded px-3 py-2 text-sm bg-paper focus:outline-none focus:ring-2 focus:ring-forest focus:border-forest"
-            />
-          </form>
+            <form onSubmit={handleCreateList} className="w-72 shrink-0">
+              <input
+                value={newListTitle}
+                onChange={(e) => setNewListTitle(e.target.value)}
+                placeholder="+ Add list"
+                className="w-full border border-line rounded px-3 py-2 text-sm bg-paper focus:outline-none focus:ring-2 focus:ring-forest focus:border-forest"
+              />
+            </form>
+          </div>
         </div>
-      </div>
+      </DndContext>
     </div>
   );
 }
@@ -213,5 +276,77 @@ function NewCardForm({
         </select>
       )}
     </form>
+  );
+}
+function DroppableList({
+  listId,
+  title,
+  children,
+}: {
+  listId: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: listId });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`w-72 shrink-0 rounded-lg p-1 transition-colors ${
+        isOver ? "bg-forest/5" : ""
+      }`}
+    >
+      <p className="font-medium text-sm mb-3 px-1">{title}</p>
+      <div className="flex flex-col gap-2 mb-3">{children}</div>
+    </div>
+  );
+}
+function SortableCard({
+  card,
+  onDelete,
+  onPriorityChange,
+}: {
+  card: CardItem;
+  onDelete: (id: string) => void;
+  onPriorityChange: (id: string, priority: string) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: card.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <Card className="p-3 cursor-grab active:cursor-grabbing">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm">{card.title}</p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(card.id);
+            }}
+            className="text-slate hover:text-amber text-xs"
+          >
+            ✕
+          </button>
+        </div>
+        <select
+          value={card.priority}
+          onChange={(e) => onPriorityChange(card.id, e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          className={`inline-block text-xs font-mono px-1.5 py-0.5 rounded mt-2 border-0 cursor-pointer ${
+            card.priority === "high" ? "bg-amber/10 text-amber" : "bg-slate/10 text-slate"
+          }`}
+        >
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+        </select>
+      </Card>
+    </div>
   );
 }

@@ -101,16 +101,23 @@ router.patch("/:id", async (req: AuthRequest, res) => {
     return res.status(404).json({ error: "Card not found" });
   }
 
-  const list = await getListIfAuthorized(existingCard.listId, req.userId);
+    const list = await getListIfAuthorized(existingCard.listId, req.userId);
   if (!list) {
     return res.status(404).json({ error: "Card not found" });
   }
 
-    const updateData = Object.fromEntries(
+  if (parsedBody.data.listId && parsedBody.data.listId !== existingCard.listId) {
+    const targetList = await getListIfAuthorized(parsedBody.data.listId, req.userId);
+    if (!targetList) {
+      return res.status(404).json({ error: "Target list not found" });
+    }
+  }
+
+  const updateData = Object.fromEntries(
     Object.entries(parsedBody.data).filter(([, value]) => value !== undefined)
   );
 
-   const card = await prisma.card.update({
+  const card = await prisma.card.update({
     where: { id },
     data: updateData,
   });
