@@ -16,7 +16,7 @@ const app = express();
 const httpServer = createServer(app);
 
 const io = new Server(httpServer, {
-  cors: { origin: "https://devsprint-4wlz2rvdd-ayush-5864.vercel.app" },
+  cors: { origin: "https://devsprint-gray.vercel.app" },
 });
 
 io.use((socket, next) => {
@@ -46,7 +46,7 @@ io.on("connection", (socket) => {
 
 app.set("io", io);
 
-app.use(cors({ origin: "https://devsprint-4wlz2rvdd-ayush-5864.vercel.app" }));
+app.use(cors({ origin: "https://devsprint-gray.vercel.app" }));
 app.use(express.json());
 
 app.use("/auth", authRoutes);
