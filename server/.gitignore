@@ -4,4 +4,4 @@ dist/
 .claude/
 .windsurf/
 .agents/
-generated/
+src/generated/
